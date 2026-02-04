@@ -1,0 +1,60 @@
+exchange-lab/
+├── web/                     # Next.js frontend
+│   ├── app/
+│   │   ├── api/
+│   │   │   └── auth/         # NextAuth routes
+│   │   ├── trade/
+│   │   ├── wallet/
+│   │   └── layout.tsx
+│   │
+│   ├── components/
+│   ├── lib/
+│   │   └── auth.ts
+│   ├── public/
+│   ├── package.json
+│   └── .env.local
+│
+├── api/                     # Express backend
+│   ├── src/
+│   │   ├── routes/
+│   │   │   ├── order.ts
+│   │   │   ├── market.ts
+│   │   │   └── wallet.ts
+│   │   │
+│   │   ├── middleware/
+│   │   │   └── auth.ts
+│   │   │
+│   │   ├── services/
+│   │   │   ├── order.service.ts
+│   │   │   ├── trade.service.ts
+│   │   │   └── wallet.service.ts
+│   │   │
+│   │   ├── engine/           # client to matching engine
+│   │   │   └── engine.client.ts
+│   │   │
+│   │   ├── index.ts
+│   │   └── app.ts
+│   │
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── .env
+│
+├── engine/                  # Matching engine (in-memory)
+│   ├── src/
+│   │   ├── orderbook/
+│   │   ├── matcher/
+│   │   ├── settlement/
+│   │   └── index.ts
+│   │
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── shared/                  # Shared types ONLY
+│   ├── types/
+│   │   ├── order.ts
+│   │   ├── trade.ts
+│   │   └── market.ts
+│   └── package.json
+│
+├── docker-compose.yml       # Redis + Postgres
+└── README.md
