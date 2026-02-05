@@ -1,9 +1,14 @@
 import { insertPrice } from "./binarySearch.js";
 import { orderBook } from "./orderBook.js";
 import crypto from "crypto";
-import type { orderDataType } from "../types/orderSchema.js";
 
-export function addToBook(input: orderDataType, userId: string) {
+interface AddToBookInput {
+  side: "buy" | "sell";
+  price: number;
+  quantity: number;
+}
+
+export function addToBook(input: AddToBookInput, userId: string) {
   const { side, price, quantity } = input;
 
   // do not insert empty orders
@@ -22,6 +27,7 @@ export function addToBook(input: orderDataType, userId: string) {
     timestamp: Date.now(),
     userId,
   };
+
   // New price level
   if (!bookSide.levels.has(price)) {
     bookSide.levels.set(price, []);
