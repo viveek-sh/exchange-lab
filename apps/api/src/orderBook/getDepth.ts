@@ -1,27 +1,21 @@
 import { orderBook } from "./orderBook.js";
+export function getDepth(depth = 10) {
+  const bids = [];
+  const asks = [];
 
-type DepthLevel = {
-  price: number;
-  quantity: number;
-};
+  for (const price of orderBook.bids.prices.slice(0, depth)) {
+    const orders = orderBook.bids.levels.get(price)!;
+    const qty = orders.reduce((s, o) => s + o.quantity, 0);
 
-function getDepthSide(
-  book: Map<number, { quantity: number }[]>,
-  bid: boolean,
-  levels: number,
-) {
-  return Array.from(book.entries()) // Convert Map Into array
-    .sort((a, b) => (bid ? b[0] - a[0] : a[0] - b[0])) // sort descending if bid (buy)
-    .slice(0, levels) // levels
-    .map(([price, orders]) => ({
-      // then again remap price to the average quantity
-      price,
-      quantity: orders.reduce((sum, o) => sum + o.quantity, 0),
-    }));
-}
-export function getOrderBook(levels = 10) {
-  return {
-    bids: getDepthSide(orderBook.bids, true, levels),
-    asks: getDepthSide(orderBook.asks, false, levels),
-  };
+    bids.push({ price, quantity: qty });
+  }
+
+  for (const price of orderBook.asks.prices.slice(0, depth)) {
+    const orders = orderBook.asks.levels.get(price)!;
+    const qty = orders.reduce((s, o) => s + o.quantity, 0);
+
+    asks.push({ price, quantity: qty });
+  }
+
+  return { bids, asks };
 }

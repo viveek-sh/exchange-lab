@@ -1,10 +1,13 @@
 import { Router } from "express";
-import { addOrder } from "../orderBook/addorder.js";
-import { orderBook } from "../orderBook/orderBook.js";
-import { getOrderBook } from "../orderBook/getDepth.js";
+import { addToBook } from "../orderBook/addToBook.js";
+import { fillOrder } from "../orderBook/fillOrder.js";
+import { getDepth } from "../orderBook/getDepth.js";
+// import { getSortedBook, orderBook } from "../orderBook/orderBook.js";
 import { orderInputSchema } from "../types/orderSchema.js";
 
 const router = Router();
+
+const userID = "random"; //get this from  Cookie or JWT
 
 router.post("/", (req, res) => {
   const parsedOrder = orderInputSchema.safeParse(req.body);
@@ -15,10 +18,25 @@ router.post("/", (req, res) => {
     });
   }
   const order = parsedOrder.data;
-  //Entry to the order book queue
-  const newOrder = addOrder(order);
 
-  res.status(201).json({ status: "open", newOrder });
+  const remainingQty = fillOrder(order, userID);
+  const filledQty = order.quantity - remainingQty;
+  if (remainingQty === 0) {
+    return res.status(200).json({
+      status: "filled",
+      filledQty,
+    });
+  }
+  //Order not completely filled
+  const { side, price, quantity } = order;
+  const newOrder = addToBook(order, userID);
+
+  return res.status(201).json({
+    status: "open",
+    filledQty,
+    remainingQty,
+    order: newOrder,
+  });
 });
 
 router.get("/status", (req, res) => {
@@ -26,12 +44,18 @@ router.get("/status", (req, res) => {
 });
 
 router.get("/depth", (req, res) => {
-  res.json({ depth: getOrderBook() }).status(200);
+  res.json({ depth: getDepth() }).status(200);
 });
 
 router.post("/quote", (req, res) => {
   //Get Price Qute for Market Order Status Here
 });
+
+// router.get("/book", (req, res) => {
+//   let asks = getSortedBook(orderBook.asks, true);
+//   let bids = getSortedBook(orderBook.bids, false);
+//   res.status(200).json({ asks, bids });
+// });
 
 // router.delete("/:id", (req, res) => {
 //   cancelOrder(req.params.id);
