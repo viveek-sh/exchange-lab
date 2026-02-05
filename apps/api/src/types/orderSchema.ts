@@ -11,9 +11,9 @@ export const orderInputSchema = z.object({
     .min(1)
     .regex(/^[A-Z]+$/),
 
-  side: z.enum(["buy", "sell"]),
+  side: z.enum(["bid", "ask"]), //bid = buy, ask = sell
   orderType: z.enum(["limit", "market"]),
-  price: z.number().positive().optional(),
+  price: z.number().positive(),
   quantity: z.number().positive(),
   executionType: z.enum(["ioc"]).optional(),
 });
