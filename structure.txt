@@ -49,12 +49,11 @@ exchange-lab/
 │   ├── package.json
 │   └── tsconfig.json
 │
-├── shared/                  # Shared types ONLY
-│   ├── types/
-│   │   ├── order.ts
-│   │   ├── trade.ts
-│   │   └── market.ts
-│   └── package.json
-│
+├── packages/                  # Shared types ONLY
+│       ├── package.json
+│       ├── src/client.ts
+│       ├── prisma/schema.prisma
+│    
 ├── docker-compose.yml       # Redis + Postgres
-└── README.md
+├── package.json
+└── README
