@@ -26,6 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
 
 const formSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters long"),
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters long"),
 });
@@ -33,6 +34,7 @@ const formSchema = z.object({
 const SignUp = () => {
   const form = useForm<z.infer<typeof formSchema>>({
     defaultValues: {
+      name: "",
       email: "",
       password: "",
     },
@@ -61,6 +63,25 @@ const SignUp = () => {
         <CardContent className="space-y-4">
           <Form {...form}>
             <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="John Doe"
+                        type="text"
+                        autoComplete="name"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="email"

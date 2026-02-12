@@ -29,8 +29,12 @@ export default function Navbar() {
             placeholder="Search markets"
             className="hidden md:block w-56"
           />
-          <Button variant="ghost">Log in</Button>
-          <Button>Sign up</Button>
+          <Link href="/auth/login">
+            <Button variant="ghost">Log in</Button>
+          </Link>
+          <Link href="/auth/signup">
+            <Button>Sign up</Button>
+          </Link>
         </div>
       </div>
     </nav>
