@@ -23,7 +23,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
 import Image from "next/image";
+import axios from "axios";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
@@ -32,6 +36,10 @@ const formSchema = z.object({
 });
 
 const SignUp = () => {
+  const router = useRouter();
+  const [message, setMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
   const form = useForm<z.infer<typeof formSchema>>({
     defaultValues: {
       name: "",
@@ -41,16 +49,34 @@ const SignUp = () => {
     resolver: zodResolver(formSchema),
   });
 
-  const onSubmit = (data: z.infer<typeof formSchema>) => {
-    console.log(data);
+  const api = axios.create({
+    baseURL: process.env.NEXT_PUBLIC_BACKEND,
+  });
+
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    setIsLoading(true);
+    try {
+      const res = await api.post("/auth/signup", data);
+      if (res.status === 201) {
+        router.push("/login");
+      }
+    } catch (error: any) {
+      if (error.response) {
+        setMessage(error.response.data.msg);
+      } else {
+        setMessage("Something went wrong. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center ">
-            <Image src="/logo.svg" alt="XCHG logo" width={170} height={60} />
+          <div className="mx-auto mb-4 flex items-center justify-center ">
+            <Image src="/logo.svg" alt="XCHG logo" width={200} height={50} />
           </div>
           <CardTitle className="text-2xl font-bold">
             Create an account
@@ -120,7 +146,8 @@ const SignUp = () => {
                 )}
               />
 
-              <Button className="w-full" type="submit">
+              <Button className="w-full" type="submit" disabled={isLoading}>
+                {isLoading && <Spinner className="mr-2 h-4 w-4" />}
                 Create account
               </Button>
             </form>
@@ -142,10 +169,13 @@ const SignUp = () => {
         </CardContent>
 
         <CardFooter className="flex flex-col space-y-4">
+          <div className="text-center text-base text-muted-foreground">
+            {message && <p className={"text-red-500"}>{message}</p>}
+          </div>
           <div className="text-center text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link
-              href="/auth/login"
+              href="/login"
               className="font-medium text-primary underline-offset-4 hover:underline">
               Sign in
             </Link>
