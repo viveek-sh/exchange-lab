@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   },
 };
 
-import { AuthProvider } from "@/components/authProvider";
+import Providers from "@/components/providers";
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,11 +31,11 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <AuthProvider>
-          <Navbar></Navbar>
+        <Providers>
+          <Navbar />
           {children}
-        </AuthProvider>
-        <Footer></Footer>
+          <Footer></Footer>
+        </Providers>
       </body>
     </html>
   );

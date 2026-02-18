@@ -5,10 +5,12 @@ import { Input } from "@/components/ui/input";
 import Image from "next/image";
 import Link from "next/link";
 import ProfileMenu from "@/components/profileMenu";
-import { useAuth } from "@/components/authProvider";
+import { useSession } from "next-auth/react";
 
 export default function Navbar() {
-  const { user } = useAuth();
+  const { data: session, status } = useSession();
+
+  const user = session?.user;
 
   return (
     <nav className="border-b bg-background">
@@ -26,8 +28,15 @@ export default function Navbar() {
 
           <div className="hidden md:flex gap-4 text-sm text-muted-foreground">
             <button>Trade</button>
-            <button>Markets</button>
             <button>Portfolio</button>
+            <button>Wallet</button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Input
+            placeholder="Search markets"
+            className="hidden md:block w-56"
           />
 
           {!user ? (
@@ -41,7 +50,7 @@ export default function Navbar() {
             </>
           ) : (
             <div className="flex items-center gap-3">
-              <ProfileMenu name={user.name} email={user.email} />
+              <ProfileMenu name={user.name ?? ""} email={user.email ?? ""} />
             </div>
           )}
         </div>

@@ -1,7 +1,6 @@
 "use client";
-// import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/components/authProvider";
+
+import { signOut } from "next-auth/react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,7 +8,6 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
@@ -19,43 +17,56 @@ type ProfileMenuProps = {
   email: string;
 };
 
-const ProfileMenu = ({ name, email }: ProfileMenuProps) => {
-  const { setUser } = useAuth();
-  const router = useRouter();
-  const handleLogout = async () => {
-    await fetch("/api/v1/auth/logout", {
-      method: "POST",
-      credentials: "include",
-    });
+const Avatar = ({ name }: { name: string }) => (
+  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-neutral-700 bg-muted text-sm font-semibold text-white">
+    {name?.charAt(0).toUpperCase()}
+  </div>
+);
 
-    setUser(null); // 🔥 instantly update navbar
-    router.push("/"); // optional redirect
+const ProfileMenu = ({ name, email }: ProfileMenuProps) => {
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/" });
   };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <div className="flex h-9 w-9 items-center justify-center border-2 border-neutral-700 rounded-full bg-muted  text-white text-sm font-semibold">
-          {name?.charAt(0).toUpperCase()}
-        </div>
+        <button className="cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Avatar name={name} />
+        </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56">
+
+      <DropdownMenuContent className="w-56" align="end">
         <DropdownMenuLabel className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center border-2 border-neutral-700 rounded-full bg-muted  text-white text-sm font-semibold">
-            {name?.charAt(0).toUpperCase()}
-          </div>
-          <div className="flex flex-1 flex-col">
-            <span className="text-popover-foreground">{name}</span>
-            <span className="text-muted-foreground text-xs">{email}</span>
+          <Avatar name={name} />
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <span className="truncate text-popover-foreground">{name}</span>
+            <span className="truncate text-xs text-muted-foreground">
+              {email}
+            </span>
           </div>
         </DropdownMenuLabel>
+
         <DropdownMenuSeparator />
+
         <DropdownMenuGroup>
-          <DropdownMenuItem disabled>Profile</DropdownMenuItem>
-          <DropdownMenuItem disabled>Wallet</DropdownMenuItem>
-          <DropdownMenuItem disabled>Orders</DropdownMenuItem>
-          <DropdownMenuItem disabled>Docs</DropdownMenuItem>
-          <DropdownMenuItem onClick={handleLogout}>Log Out</DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/user">Profile</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/user/wallet">Wallet</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/user/orders">Orders</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem>
+            <Link href="/docs">Docs</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={handleLogout}
+            className="text-red-500 focus:text-red-500 ">
+            Log Out
+          </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>

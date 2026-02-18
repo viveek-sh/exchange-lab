@@ -1,10 +1,21 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+
+import { Coins } from "lucide-react";
 
 export default function HeroBanner() {
   return (
-    <Card className="mt-6 bg-gradient-to-r from-background to-muted">
-      <CardContent className="p-8">
+    <>
+      <div className="bg-primary text-primary-foreground">
+        <div className="max-w-7xl mx-auto px-3 py-3 flex items-center justify-center gap-2">
+          <Coins className="size-5 stroke-2 shrink-0" />
+          <span className="font-medium text-sm">
+            Start trading today with a <strong>$50,000</strong> virtual balance
+            available for all new members.
+          </span>
+        </div>
+      </div>
+      {/* Hero Section */}
+      <div className="mt-6 rounded-xl bg-gradient-to-r from-background to-muted p-8">
         <h1 className="text-3xl font-bold">
           Earn 5.16% APY on your SOL collateral
         </h1>
@@ -13,7 +24,7 @@ export default function HeroBanner() {
         </p>
 
         <Button className="mt-6">Lend SOL</Button>
-      </CardContent>
-    </Card>
+      </div>
+    </>
   );
 }
