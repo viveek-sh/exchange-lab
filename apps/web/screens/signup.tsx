@@ -29,6 +29,7 @@ import axios from "axios";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
@@ -59,7 +60,13 @@ const SignUp = () => {
     try {
       const res = await api.post("/auth/signup", data);
       if (res.status === 201) {
-        router.push("/login");
+        toast.success("Verification email sent", {
+          description: "Please check your inbox and verify your account.",
+        });
+
+        setTimeout(() => {
+          router.push("/login?verify=sent");
+        }, 2000);
       }
     } catch (error: any) {
       if (error.response) {

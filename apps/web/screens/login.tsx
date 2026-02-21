@@ -28,6 +28,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { ResetPassTrigger } from "@/components/resetPass";
 
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -158,6 +159,9 @@ const Login = () => {
               className="font-medium text-primary underline-offset-4 hover:underline">
               Sign Up
             </Link>
+          </div>
+          <div className="text-center text-sm text-muted-foreground">
+            <ResetPassTrigger email="" name="Forgot Password?" variant="link" />
           </div>
 
           <div className="text-center text-xs text-muted-foreground">
