@@ -14,7 +14,7 @@ export const authOptions: NextAuthOptions = {
       await prisma.wallet.create({
         data: {
           userId: user.id,
-          balance: 10000,
+          balance: 50000,
         },
       });
     },
