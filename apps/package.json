@@ -1,0 +1,25 @@
+{
+  "name": "exchange-lab",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "web",
+    "api",
+    "engine",
+    "ws",
+    "packages/db"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=web",
+    "dev:api": "npm run dev --workspace=api",
+    "dev:engine": "npm run dev --workspace=engine",
+    "dev:all": "npm run dev --workspaces",
+    "build": "npm run build --workspaces",
+    "db:generate": "npm run db:generate --workspace=packages/db",
+    "db:push": "npm run db:push --workspace=packages/db",
+    "db:studio": "npm run db:studio --workspace=packages/db"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
