@@ -1,7 +1,7 @@
 import { createClient } from "redis";
 import type { RedisClientType } from "redis";
 import { randomUUID } from "crypto";
-import type { EngineResponse } from "./types/engineResponse.js";
+import type { EngineResponse } from "@exchange-lab/shared";
 
 export class EngineClient {
   private client: RedisClientType;

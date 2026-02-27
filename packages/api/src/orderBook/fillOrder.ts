@@ -1,4 +1,4 @@
-import type { orderDataType } from "../types/orderSchema.js";
+import type { orderDataType } from "../schema/orderSchema.js";
 import { orderBook } from "./orderBook.js";
 
 export function fillOrder(order: orderDataType, userId: string) {

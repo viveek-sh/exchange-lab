@@ -1,5 +1,5 @@
 {
-  "name": "engine",
+  "name": "@exchange-lab/engine",
   "version": "1.0.0",
   "description": "engine for handling orders",
   "license": "ISC",
@@ -10,6 +10,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "@exchange-lab/db": "*"
+    "@exchange-lab/db": "*",
+    "@exchange-lab/api": "*",
+    "@types/redis": "^4.0.10"
   }
 }

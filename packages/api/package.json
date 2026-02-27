@@ -1,5 +1,5 @@
 {
-  "name": "api",
+  "name": "@exchange-lab/api",
   "version": "1.0.0",
   "description": "backend for exchange-lab",
   "license": "ISC",
@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@exchange-lab/db": "*",
+    "@exchange-lab/shared": "*",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "cors": "^2.8.6",
