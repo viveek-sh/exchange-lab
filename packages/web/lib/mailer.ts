@@ -44,7 +44,7 @@ export const sendEmail = async ({
       MailtrapTransport({
         token: MAIL_TOKEN!,
         sandbox: true,
-        testInboxId: 4399163,
+        testInboxId: 4437988,
       }),
     );
 
