@@ -1,4 +1,5 @@
 import { BASE_CURRENCY } from "@exchange-lab/shared";
+import { randomUUID } from "crypto";
 export interface Order {
   price: number;
   quantity: number;
@@ -11,7 +12,7 @@ export interface Order {
 export interface Fill {
   price: string;
   qty: number;
-  tradeId: number;
+  tradeId: number; // This may cause issue in future
   otherUserId: string;
   markerOrderId: string;
 }
@@ -36,5 +37,112 @@ export class orderbook {
     this.baseAsset = baseAsset;
     this.lastTradeId = lastTradeId || 0;
     this.currentPrice = currentPrice || 0;
+  }
+  getSnapshot() {
+    return;
+  }
+  addOrder(order: Order): { executedQty: number; fills: Fill[] } {
+    if (order.side == "buy") {
+      const { executedQty, fills } = this.matchBuytoAsks(order);
+      order.filled = executedQty;
+      if (executedQty === order.quantity) {
+        return {
+          executedQty,
+          fills,
+        };
+      }
+      this.bids.push(order);
+    } else {
+      const { executedQty, fills } = this.matchSelltoBids(order);
+      order.filled = executedQty;
+      if (executedQty === order.quantity) {
+        return {
+          executedQty,
+          fills,
+        };
+      }
+      this.asks.push(order);
+    }
+  }
+  matchBuytoAsks(order: Order): { fills: Fill[]; executedQty: number } {
+    const fills: Fill[] = [];
+    let executedQty = 0;
+
+    //Sort asks
+    this.asks.sort((x, y) => x.price - y.price);
+
+    // Loop through all the sell order on the orderbook
+    for (let i = 0; i < this.asks.length; i++) {
+      const ask = this.asks[i]!;
+
+      if (ask.price > order.price) {
+        break;
+      }
+
+      const remainingBuy = order.quantity - executedQty;
+      const remainingAsk = ask.quantity - ask.filled;
+
+      const filledQty = Math.min(remainingBuy, remainingAsk);
+      executedQty += filledQty;
+      ask.filled += filledQty;
+
+      // push filled order to fills arr
+      fills.push({
+        price: ask.price.toString(),
+        qty: filledQty,
+        tradeId: this.lastTradeId++,
+        otherUserId: ask.userId,
+        markerOrderId: ask.orderId,
+      });
+
+      // remove order from asks[] fully filled
+      if (ask.filled === ask.quantity) {
+        this.asks.splice(i, 1);
+        i--;
+      }
+
+      // stop if order is fully filled
+      if (executedQty === order.quantity) break;
+    }
+    return { fills, executedQty };
+  }
+  matchSelltoBids(order: Order): { fills: Fill[]; executedQty: number } {
+    const fills: Fill[] = [];
+    let executedQty = 0;
+
+    this.bids.sort((x, y) => y.price - x.price);
+
+    for (let i = 0; i < this.bids.length; i++) {
+      const bid = this.bids[i]!;
+
+      if (bid.price < order.price) {
+        break;
+      }
+
+      const remainingSell = order.quantity - executedQty;
+      const remainingBid = bid.quantity - bid.filled;
+
+      const filledQty = Math.min(remainingSell, remainingBid);
+      executedQty += filledQty;
+      bid.filled += filledQty;
+
+      fills.push({
+        price: bid.price.toString(),
+        qty: filledQty,
+        tradeId: this.lastTradeId++,
+        otherUserId: bid.userId,
+        markerOrderId: bid.orderId,
+      });
+
+      if (bid.filled === bid.quantity) {
+        this.bids.splice(i, 1);
+        i--;
+      }
+
+      if (executedQty === order.quantity) {
+        break;
+      }
+    }
+    return { fills, executedQty };
   }
 }
