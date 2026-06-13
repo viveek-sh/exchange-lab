@@ -1,9 +1,0 @@
-Engine : 
-- Pick orders from the Redis Queue
-- Call function to process the order 
-  -- Performs DB Checks 
-  -- Balance Checks
-  -- Lock Balance
-  -- Tries to fill the orderbook
-  -- Responds with the status of the order
-- get the response and publish with the order.clientID channel
