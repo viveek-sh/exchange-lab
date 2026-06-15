@@ -1,7 +1,12 @@
 import fs from "fs";
 import { prisma } from "@exchange-lab/db";
 import { RedisManager } from "../redisClient.js";
-import { OPEN_ORDERS, ORDER_UPDATE, TRADE_ADDED } from "@exchange-lab/shared";
+import {
+  DEPTH,
+  OPEN_ORDERS,
+  ORDER_UPDATE,
+  TRADE_ADDED,
+} from "@exchange-lab/shared";
 import { randomUUID } from "crypto";
 import {
   CANCEL_ORDER,
@@ -141,6 +146,16 @@ export class Engine {
           });
         } catch (error) {
           console.log("Error hwile cancelling order.\n" + error);
+
+          // safe fallbackS
+          RedisManager.getInstance().sendToApi(clientId, {
+            type: "ORDER_CANCELLED",
+            payload: {
+              orderId: "",
+              executedQty: 0,
+              remainingQty: 0,
+            },
+          });
         }
         break;
       case GET_OPEN_ORDERS:
@@ -170,6 +185,11 @@ export class Engine {
           });
         } catch (error) {
           console.log("Error Getting open order.\n" + error);
+          // Fallback response
+          RedisManager.getInstance().sendToApi(clientId, {
+            type: OPEN_ORDERS,
+            payload: [], // Empty array means no open orders
+          });
         }
         break;
       // case ON_RAMP:
@@ -180,8 +200,36 @@ export class Engine {
 
       case GET_DEPTH:
         try {
+          const market = message.data.market;
+          const orderBook = this.orderbooks.find(
+            (ob) => ob.ticker() === market,
+          );
+          if (!orderBook) {
+            throw new Error("No Orderbook Found");
+          }
+
+          const depth = orderBook.getDepth();
+
+          // Construct the payload to exactly match the expected Type
+          RedisManager.getInstance().sendToApi(clientId, {
+            type: "DEPTH",
+            payload: {
+              market: market,
+              // Map through the array [price, quantity] and convert to strings
+              bids: depth.bids.map((b) => [b[0].toString(), b[1].toString()]),
+              asks: depth.asks.map((a) => [a[0].toString(), a[1].toString()]),
+            },
+          });
         } catch (error) {
           console.log("Error Getting Depth of Orderbook.\n" + error);
+          RedisManager.getInstance().sendToApi(clientId, {
+            type: "DEPTH",
+            payload: {
+              market: message.data.market,
+              bids: [],
+              asks: [],
+            },
+          });
         }
         break;
     }
