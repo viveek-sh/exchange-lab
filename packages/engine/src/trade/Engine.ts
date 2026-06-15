@@ -1,7 +1,7 @@
 import fs from "fs";
 import { prisma } from "@exchange-lab/db";
 import { RedisManager } from "../redisClient.js";
-import { ORDER_UPDATE, TRADE_ADDED } from "@exchange-lab/shared";
+import { OPEN_ORDERS, ORDER_UPDATE, TRADE_ADDED } from "@exchange-lab/shared";
 import { randomUUID } from "crypto";
 import {
   CANCEL_ORDER,
@@ -11,7 +11,8 @@ import {
   ON_RAMP,
 } from "@exchange-lab/shared";
 import type { EngineRequest } from "@exchange-lab/shared";
-import { Fill, Order, Orderbook } from "./Orderbook";
+import { Orderbook } from "./Orderbook.js";
+import type { Fill, Order } from "./Orderbook.js";
 
 interface UserBalance {
   [key: string]: {
@@ -87,7 +88,65 @@ export class Engine {
           });
         }
         break;
+      case CANCEL_ORDER:
+        try {
+          const orderId = message.data.orderId;
+          const market = message.data.market;
+          const cancelOrderbook = this.orderbooks.find(
+            (order) => order.ticker() === market,
+          );
+          const quoteAsset = market.split("_")[1];
+          if (!cancelOrderbook) {
+            throw new Error("No orderbook found.");
+          }
+          const order =
+            cancelOrderbook.asks.find((order) => order.orderId == orderId) ||
+            cancelOrderbook.bids.find((order) => order.orderId == orderId);
+          if (!order) {
+            throw new Error("No order found");
+          }
+          if (order.side === "buy") {
+            // Cancling  the order here
+            const price = cancelOrderbook.cancelBid(order);
+            const leftQty = (order.quantity - order.filled) * order.price;
+            // Release Locked Funds
+            //@ts-ignore
+            this.balances.get(order.userId)[BASE_CURRENCY]?.available +=
+              leftQty;
+            //@ts-ignore
+            this.balances.get(order.userId)[BASE_CURRENCY]?.locked -= leftQty;
+            if (price) {
+              this.sendUpdatedDepthAt(price.toString(), market);
+            }
+          } else {
+            const price = cancelOrderbook.cancelAsk(order);
+            const leftQty = (order.quantity - order.filled) * order.price;
+            // Release Locked Assets
+            //@ts-ignore
+            this.balances.get(order.userId)[quoteAsset]?.available += leftQty;
+            //@ts-ignore
+            this.balances.get(order.userId)[quoteAsset]?.locked -= leftQty;
+            if (price) {
+              this.sendUpdatedDepthAt(price.toString(), market);
+            }
+          }
+          //send response to  the API back via subscribed channel by the FE
+          RedisManager.getInstance().sendToApi(clientId, {
+            type: "ORDER_CANCELLED",
+            payload: {
+              orderId,
+              executedQty: 0,
+              remainingQty: 0,
+            },
+          });
+        } catch (error) {
+          console.log("Error hwile cancelling order.\n" + error);
+        }
+        break;
     }
+  }
+  addOrderbook(orderbook: Orderbook) {
+    this.orderbooks.push(orderbook);
   }
   createOrder(
     market: string,
