@@ -143,6 +143,47 @@ export class Engine {
           console.log("Error hwile cancelling order.\n" + error);
         }
         break;
+      case GET_OPEN_ORDERS:
+        try {
+          const openOrderbook = this.orderbooks.find(
+            (order) => order.ticker() === message.data.market,
+          );
+          if (!openOrderbook) {
+            throw new Error("No Orderbook Found");
+          }
+          const openOrders = openOrderbook?.getOpenOrder(message.data.userId);
+
+          //Format Data Before sendign
+          const openOrdersPayload = openOrders.map((order) => ({
+            orderId: order.orderId,
+            executedQty: order.filled, // Map 'filled' to 'executedQty'
+            price: order.price.toString(), // Convert number to string
+            quantity: order.quantity.toString(), // Convert number to string
+            side: order.side,
+            userId: order.userId,
+          }));
+
+          //response to FE
+          RedisManager.getInstance().sendToApi(clientId, {
+            type: OPEN_ORDERS,
+            payload: openOrdersPayload,
+          });
+        } catch (error) {
+          console.log("Error Getting open order.\n" + error);
+        }
+        break;
+      // case ON_RAMP:
+      //   const userId = message.data.userId;
+      //   const amount = Number(message.data.amount);
+      //   this.onRamp(userId, amount);
+      //   break;
+
+      case GET_DEPTH:
+        try {
+        } catch (error) {
+          console.log("Error Getting Depth of Orderbook.\n" + error);
+        }
+        break;
     }
   }
   addOrderbook(orderbook: Orderbook) {
