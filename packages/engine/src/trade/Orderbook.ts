@@ -9,13 +9,12 @@ export interface Order {
 }
 
 export interface Fill {
-  price: string;
+  tradeId: number; //Limited to max number value
+  price: number;
   qty: number;
-  tradeId: number; // This may cause issue in future
   otherUserId: string;
-  markerOrderId: string;
+  makerOrderId: string;
 }
-
 export class Orderbook {
   bids: Order[];
   asks: Order[];
@@ -36,6 +35,9 @@ export class Orderbook {
     this.baseAsset = baseAsset;
     this.lastTradeId = lastTradeId || 0;
     this.currentPrice = currentPrice || 0;
+  }
+  ticker() {
+    return `${this.baseAsset}_${this.quoteAsset}`;
   }
   getSnapshot() {
     return;
@@ -72,53 +74,57 @@ export class Orderbook {
     const fills: Fill[] = [];
     let executedQty = 0;
 
-    //Sort asks
+    // TODO: Move sorting to order insertion phase to optimize performance
     this.asks.sort((x, y) => x.price - y.price);
 
-    // Loop through all the sell order on the orderbook
     for (let i = 0; i < this.asks.length; i++) {
       const ask = this.asks[i]!;
 
+      // Stop if the seller wants more than the buyer is willing to pay
       if (ask.price > order.price) {
         break;
       }
 
       const remainingBuy = order.quantity - executedQty;
-      const remainingAsk = ask.quantity - ask.filled;
+      const remainingAsk = ask.quantity - ask.filled; // Standardized to executedQty
 
       const filledQty = Math.min(remainingBuy, remainingAsk);
       executedQty += filledQty;
       ask.filled += filledQty;
 
-      // push filled order to fills arr
+      // add to fills
       fills.push({
-        price: ask.price.toString(),
+        price: ask.price,
         qty: filledQty,
         tradeId: this.lastTradeId++,
         otherUserId: ask.userId,
-        markerOrderId: ask.orderId,
+        makerOrderId: ask.orderId,
       });
 
-      // remove order from asks[] fully filled
+      // Remove fully filled maker order
       if (ask.filled === ask.quantity) {
         this.asks.splice(i, 1);
         i--;
       }
 
-      // stop if order is fully filled
+      // Stop if taker order is fully filled
       if (executedQty === order.quantity) break;
     }
+
     return { fills, executedQty };
   }
+
   matchSelltoBids(order: Order): { fills: Fill[]; executedQty: number } {
     const fills: Fill[] = [];
     let executedQty = 0;
 
+    // TODO: Move sorting to order insertion phase to optimize performance
     this.bids.sort((x, y) => y.price - x.price);
 
     for (let i = 0; i < this.bids.length; i++) {
       const bid = this.bids[i]!;
 
+      // Price-Time priority: Stop if the buyer wants to pay less than the seller is asking
       if (bid.price < order.price) {
         break;
       }
@@ -131,11 +137,11 @@ export class Orderbook {
       bid.filled += filledQty;
 
       fills.push({
-        price: bid.price.toString(),
+        price: bid.price,
         qty: filledQty,
         tradeId: this.lastTradeId++,
         otherUserId: bid.userId,
-        markerOrderId: bid.orderId,
+        makerOrderId: bid.orderId,
       });
 
       if (bid.filled === bid.quantity) {
@@ -147,6 +153,7 @@ export class Orderbook {
         break;
       }
     }
+
     return { fills, executedQty };
   }
   getDepth() {

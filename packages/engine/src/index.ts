@@ -1,5 +1,5 @@
 import { createClient } from "redis";
-import { Engine } from "./trade/Engine";
+import { Engine } from "./trade/Engine.js";
 
 async function main() {
   // const engine = await Engine.create();
@@ -11,7 +11,7 @@ async function main() {
     const response = await redisClient.rPop("Messages" as string);
     if (!response) {
     } else {
-      engine.process(JSON.parse(response));
+      Engine.process(JSON.parse(response));
     }
   }
 }
