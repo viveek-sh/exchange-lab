@@ -192,11 +192,11 @@ export class Engine {
           });
         }
         break;
-      // case ON_RAMP:
-      //   const userId = message.data.userId;
-      //   const amount = Number(message.data.amount);
-      //   this.onRamp(userId, amount);
-      //   break;
+      case ON_RAMP:
+        const userId = message.data.userId;
+        const amount = Number(message.data.amount);
+        this.onRamp(userId, amount);
+        break;
 
       case GET_DEPTH:
         try {
@@ -250,6 +250,12 @@ export class Engine {
     const baseAsset = market.split("_")[0];
     const quoteAsset = market.split("_")[1];
 
+    if (!baseAsset || !quoteAsset) {
+      throw new Error(
+        `Invalid market format: ${market}. Expected format is BASE_QUOTE (e.g., RIL_INR)`,
+      );
+    }
+
     if (!orderbook) {
       throw new Error("No orderbook found");
     }
@@ -259,7 +265,6 @@ export class Engine {
       quoteAsset,
       side,
       userId,
-      quoteAsset,
       price,
       quantity,
     );
@@ -332,5 +337,70 @@ export class Engine {
     } catch (error) {
       console.error("Failed to fetch balances from DB:", error);
     }
+  }
+  checkAndLockFunds(
+    baseAsset: string,
+    quoteAsset: string,
+    side: "buy" | "sell",
+    userId: string,
+    price: string,
+    quantity: string,
+  ) {
+    const userWallet = this.balances.get(userId);
+    if (!userWallet) {
+      throw new Error("User wallet profile not initialized");
+    }
+
+    // avoid floating point Trap
+    const qty = Number(quantity);
+    const prc = Number(price);
+
+    if (side === "buy") {
+      const totalCost = qty * prc;
+      const asset = userWallet[quoteAsset];
+
+      if (!asset) {
+        throw new Error(`User does not hold: ${quoteAsset}`);
+      }
+      if (asset.available < totalCost) {
+        throw new Error("Insufficient Funds");
+      }
+
+      asset.available -= totalCost;
+      asset.locked += totalCost;
+    } else {
+      const asset = userWallet[baseAsset];
+
+      if (!asset) {
+        throw new Error(`User does not hold: ${baseAsset}`);
+      }
+      if (asset.available < qty) {
+        throw new Error(`Insufficient ${baseAsset} qty for this sell order`);
+      }
+
+      asset.available -= qty;
+      asset.locked += qty;
+    }
+  }
+  onRamp(userId: string, amount: number) {
+    if (amount <= 0) {
+      throw new Error("Deposit amount must be positive");
+    }
+
+    //  check userWallet Exsist
+    let userWallet = this.balances.get(userId);
+
+    if (!userWallet) {
+      userWallet = {};
+      this.balances.set(userId, userWallet);
+    }
+
+    // Initialize the basecurrecny if the user doesn't have it yet
+    if (!userWallet[BASE_CURRENCY]) {
+      userWallet[BASE_CURRENCY] = { available: 0, locked: 0 };
+    }
+
+    // update balance
+    userWallet[BASE_CURRENCY].available += amount;
   }
 }
