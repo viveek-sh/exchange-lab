@@ -279,7 +279,7 @@ export class Engine {
     };
 
     const { fills, executedQty } = orderbook.addOrder(order);
-    this.updateBalance(userId, baseAsset, quoteAsset, side, fills, executedQty);
+    this.updateBalance(userId, baseAsset, quoteAsset, side, fills);
 
     this.createDbTrades(fills, market, userId);
     this.updateDbOrders(order, executedQty, fills, market);
@@ -300,7 +300,7 @@ export class Engine {
         select: {
           userId: true,
           balance: true,
-          assetsHeld: true, // JSON column storing assets
+          assetsHeld: true,
         },
       });
 
@@ -309,23 +309,23 @@ export class Engine {
       for (const wallet of wallets) {
         const userBalances: UserBalance = {};
 
-        // Base currency (INR)
+        // Prisma Decimal Safety
         userBalances[BASE_CURRENCY] = {
-          available: Number(wallet.balance ?? 0),
+          available: Number(wallet.balance?.toString() ?? "0"),
           locked: 0,
         };
 
-        // Assets held (stocks/crypto etc.)
         if (wallet.assetsHeld) {
           const assets =
             typeof wallet.assetsHeld === "string"
               ? JSON.parse(wallet.assetsHeld)
               : wallet.assetsHeld;
 
-          for (const asset of Object.keys(assets)) {
-            userBalances[asset] = {
-              available: Number(assets[asset].available ?? 0),
-              locked: Number(assets[asset].locked ?? 0),
+          // Faster and cleaner object iteration
+          for (const [ticker, assetData] of Object.entries(assets)) {
+            userBalances[ticker] = {
+              available: Number((assetData as any).available ?? 0),
+              locked: Number((assetData as any).locked ?? 0),
             };
           }
         }
@@ -380,6 +380,63 @@ export class Engine {
 
       asset.available -= qty;
       asset.locked += qty;
+    }
+  }
+  updateBalance(
+    userId: string,
+    baseAsset: string,
+    quoteAsset: string,
+    side: "buy" | "sell",
+    fills: Fill[],
+  ) {
+    if (side === "buy") {
+      const userWallet = this.balances.get(userId);
+      if (!userWallet) {
+        throw new Error(`User wallet ${userId} not initialized`);
+      }
+
+      // Initialize asset if there no existing qty
+      if (!userWallet[baseAsset]) {
+        userWallet[baseAsset] = { available: 0, locked: 0 };
+      }
+      if (!userWallet[quoteAsset]) {
+        userWallet[quoteAsset] = { available: 0, locked: 0 };
+      }
+
+      for (const fill of fills) {
+        // Fetch the seller party
+        const otherWallet = this.balances.get(fill.otherUserId);
+        if (!otherWallet) {
+          throw new Error(`Counter-party wallet ${fill.otherUserId} not found`);
+        }
+        // Ensure counter-party's receiving asset exists
+        if (!otherWallet[baseAsset]) {
+          otherWallet[baseAsset] = { available: 0, locked: 0 };
+        }
+        if (!otherWallet[quoteAsset]) {
+          otherWallet[quoteAsset] = { available: 0, locked: 0 };
+        }
+
+        const fillCost = fill.qty * fill.price;
+
+        if (side === "buy") {
+          // Buyer/Maker gets Stock / Asset and gives INR
+          userWallet[quoteAsset].locked -= fillCost;
+          userWallet[baseAsset].available += fill.qty;
+
+          //Seller gets INR against the stock
+          otherWallet[baseAsset].locked -= fill.qty;
+          otherWallet[quoteAsset].available += fillCost;
+        } else {
+          // Seller gets Inr and gives Stock
+          userWallet[baseAsset].locked -= fill.qty;
+          userWallet[quoteAsset].available += fillCost;
+
+          // MAKER/Buyer gives INR and gains Asset/Stock
+          otherWallet[quoteAsset].locked -= fillCost;
+          otherWallet[baseAsset].available += fill.qty;
+        }
+      }
     }
   }
   onRamp(userId: string, amount: number) {
