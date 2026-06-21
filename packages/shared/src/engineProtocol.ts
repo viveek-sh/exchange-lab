@@ -94,4 +94,12 @@ export type EngineResponse =
         side: "buy" | "sell";
         userId: string;
       }[];
+    }
+  | {
+      type: typeof ON_RAMP;
+      payload: {
+        status: "success" | "error";
+        message: string;
+        txnId?: string;
+      };
     };
