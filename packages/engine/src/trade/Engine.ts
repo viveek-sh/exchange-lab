@@ -290,7 +290,7 @@ export class Engine {
 
     this.createDbTrades(fills, market, userId);
     this.updateDbOrders(order, executedQty, fills, market);
-    this.publisWsDepthUpdates(fills, price, side, market);
+    this.publishWsDepthUpdates(fills, price, side, market);
     this.publishWsTrades(fills, market, side);
     return { executedQty, fills, orderId: order.orderId };
   }
@@ -529,6 +529,48 @@ export class Engine {
           p: fill.price.toString(),
           q: fill.qty.toString(),
           s: market,
+        },
+      });
+    }
+  }
+  publishWsDepthUpdates(
+    fills: Fill[],
+    price: string,
+    side: "buy" | "sell",
+    market: string,
+  ) {
+    const orderbook = this.orderbooks.find((o) => o.ticker() === market);
+    if (!orderbook) {
+      return;
+    }
+
+    const depth = orderbook.getDepth();
+    const changedPrices = new Set(fills.map((f) => f.price.toString()));
+
+    if (side === "buy") {
+      const updatedAsks = depth?.asks.filter((x) => changedPrices.has(x[0]));
+      const updatedBid = depth?.bids.find((x) => x[0] === price);
+
+      RedisManager.getInstance().publishMessage(`depth@${market}`, {
+        stream: `depth@${market}`,
+        data: {
+          a: updatedAsks || [],
+          b: updatedBid ? [updatedBid] : [],
+          e: "depth",
+        },
+      });
+    }
+
+    if (side === "sell") {
+      const updatedBids = depth?.bids.filter((x) => changedPrices.has(x[0]));
+      const updatedAsk = depth?.asks.find((x) => x[0] === price);
+
+      RedisManager.getInstance().publishMessage(`depth@${market}`, {
+        stream: `depth@${market}`,
+        data: {
+          a: updatedAsk ? [updatedAsk] : [],
+          b: updatedBids || [],
+          e: "depth",
         },
       });
     }
