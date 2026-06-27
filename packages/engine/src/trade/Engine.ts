@@ -3,6 +3,7 @@ import { prisma } from "@exchange-lab/db";
 import { RedisManager } from "../redisClient.js";
 import {
   DEPTH,
+  NEW_USER,
   OPEN_ORDERS,
   ORDER_UPDATE,
   TRADE_ADDED,
@@ -249,6 +250,27 @@ export class Engine {
           });
         }
         break;
+      case "ADD_USER":
+        try {
+          const { userId } = message.data;
+          this.loadWalletIntoMemory(userId);
+          console.log(`Engine loaded balances for new user: ${userId}`);
+
+          RedisManager.getInstance().sendToApi(clientId, {
+            type: NEW_USER,
+            payload: {
+              status: "success",
+            },
+          });
+        } catch (error) {
+          RedisManager.getInstance().sendToApi(clientId, {
+            type: NEW_USER,
+            payload: {
+              status: "error",
+            },
+          });
+        }
+        break;
       case GET_DEPTH:
         try {
           const market = message.data.market;
@@ -346,52 +368,42 @@ export class Engine {
     };
     fs.writeFileSync("./snapshot.json", JSON.stringify(snapshotSnapshot));
   }
+  loadWalletIntoMemory(wallet: any) {
+    const userBalances: UserBalance = {};
+
+    userBalances[BASE_CURRENCY] = {
+      available: Number(wallet.balance?.toString() ?? "0"),
+      locked: 0,
+    };
+
+    if (wallet.assetsHeld) {
+      const assets =
+        typeof wallet.assetsHeld === "string"
+          ? JSON.parse(wallet.assetsHeld)
+          : wallet.assetsHeld;
+
+      for (const [ticker, assetData] of Object.entries(assets)) {
+        if (typeof assetData === "number") {
+          userBalances[ticker] = { available: assetData, locked: 0 };
+        } else if (assetData && typeof assetData === "object") {
+          userBalances[ticker] = {
+            available: Number((assetData as any).available ?? 0),
+            locked: Number((assetData as any).locked ?? 0),
+          };
+        }
+      }
+    }
+
+    this.balances.set(wallet.userId, userBalances);
+  }
   async setBaseBalances() {
     try {
-      const wallets = await prisma.wallet.findMany({
-        select: {
-          userId: true,
-          balance: true,
-          assetsHeld: true,
-        },
-      });
+      const wallets = await prisma.wallet.findMany();
 
       this.balances.clear();
-
       for (const wallet of wallets) {
-        const userBalances: UserBalance = {};
-
-        // Prisma Decimal Safety
-        userBalances[BASE_CURRENCY] = {
-          available: Number(wallet.balance?.toString() ?? "0"),
-          locked: 0,
-        };
-
-        if (wallet.assetsHeld) {
-          const assets =
-            typeof wallet.assetsHeld === "string"
-              ? JSON.parse(wallet.assetsHeld)
-              : wallet.assetsHeld;
-
-          for (const [ticker, assetData] of Object.entries(assets)) {
-            if (typeof assetData === "number") {
-              // Handle flat structure: { RIL: 100 }
-              userBalances[ticker] = {
-                available: assetData,
-                locked: 0,
-              };
-            } else if (assetData && typeof assetData === "object") {
-              userBalances[ticker] = {
-                available: Number((assetData as any).available ?? 0),
-                locked: Number((assetData as any).locked ?? 0),
-              };
-            }
-          }
-        }
-
-        this.balances.set(wallet.userId, userBalances);
+        this.loadWalletIntoMemory(wallet);
       }
-
       console.log(`Loaded balances for ${this.balances.size} users`);
     } catch (error) {
       console.error("Failed to fetch balances from DB:", error);
