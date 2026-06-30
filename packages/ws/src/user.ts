@@ -29,14 +29,18 @@ export class User {
 
   private addListeners() {
     this.ws.on("message", (message: string) => {
-      const parsedMessage: IncomingMessage = JSON.parse(message);
-      if (parsedMessage.method === SUBSCRIBE) {
+      const messageStr = message.toString();
+      const parsedMessage: IncomingMessage = JSON.parse(messageStr);
+
+      const method = parsedMessage.method?.toUpperCase();
+
+      if (method === SUBSCRIBE) {
         parsedMessage.params.forEach((s: string) =>
           SubscriptionManager.getInstance().subscribe(this.id, s),
         );
       }
 
-      if (parsedMessage.method === UNSUBSCRIBE) {
+      if (method === UNSUBSCRIBE) {
         parsedMessage.params.forEach((s: string) =>
           SubscriptionManager.getInstance().unsubscribe(this.id, s),
         );
