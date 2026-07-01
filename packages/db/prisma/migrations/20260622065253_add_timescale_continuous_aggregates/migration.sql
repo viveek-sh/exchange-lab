@@ -36,7 +36,22 @@ FROM trades
 GROUP BY market, bucket
 WITH NO DATA;
 
--- 5. Create 1-Week Continuous Aggregate
+-- 5. Create 1-Day (24-Hour) Continuous Aggregate
+CREATE MATERIALIZED VIEW IF NOT EXISTS klines_1d 
+WITH (timescaledb.continuous) AS
+SELECT
+    market,
+    time_bucket('1 day', timestamp) AS bucket,
+    first(price, timestamp) AS open,
+    max(price) AS high,
+    min(price) AS low,
+    last(price, timestamp) AS close,
+    sum(quantity) AS volume
+FROM trades
+GROUP BY market, bucket
+WITH NO DATA;
+
+-- 6. Create 1-Week Continuous Aggregate
 CREATE MATERIALIZED VIEW IF NOT EXISTS klines_1w 
 WITH (timescaledb.continuous) AS
 SELECT
@@ -51,7 +66,7 @@ FROM trades
 GROUP BY market, bucket
 WITH NO DATA;
 
--- 6. Setup Automated Refresh Policies
+-- 7. Setup Automated Refresh Policies
 -- (These will fail safely if the policy already exists)
 SELECT add_continuous_aggregate_policy('klines_1m',
   start_offset => INTERVAL '1 hour',
